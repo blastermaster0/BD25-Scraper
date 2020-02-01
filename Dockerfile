@@ -1,4 +1,4 @@
-FROM python3.6-alpine3.7
+FROM python:3-alpine
 
 RUN apk add --no-cache gcc musl-dev libxslt-dev && pip3 install pip==10.0.1
 
