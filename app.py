@@ -1,13 +1,14 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
 from dotenv import load_dotenv
-from flask import Flask, Response, request as fRequest, stream_with_context
+from flask import Flask, Response, request as fRequest, send_file
 from io import BytesIO
 from os import getenv
 from sys import argv
 import re
 import requests
 import xml.etree.ElementTree as ET
+from unrar import rarfile
 
 # Constants
 BASE_URL = "http://www.bd25.eu"
@@ -272,11 +273,18 @@ def download():
     nzbId = fRequest.args.get("id")
     session = requests.Session()
     login(session)
-    res = session.get(f"{DOWNLOAD_URL}?id={nzbId}", stream=True)
-    return Response(
-        stream_with_context(res.iter_content()),
-        content_type=res.headers["content-type"],
-        headers={"Content-Disposition": res.headers["Content-Disposition"]},
+    filename = f"{nzbId}-{datetime.utcnow()}"
+    rarFile = f"/tmp/{filename}.rar"
+    res = session.get(f"{DOWNLOAD_URL}?id={nzbId}")
+    with open(rarFile, "wb") as f:
+        for chunk in res.iter_content(chunk_size=1024):
+            if chunk:
+                f.write(chunk)
+    rar = rarfile.RarFile(rarFile)
+    file = next(x for x in rar.infolist() if x.filename.endswith("nzb"))
+    rar.extract(file, path="/tmp")
+    return send_file(
+        f"/tmp/{file.filename}", attachment_filename=file.filename, as_attachment=True
     )
 
 
