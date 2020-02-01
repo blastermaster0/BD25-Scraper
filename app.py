@@ -203,7 +203,7 @@ def api():
     xml = ""
     if reqType == "caps":
         xml = buildCapsXML()
-    if reqType == "search":
+    if reqType == "search" or reqType == "movie":
         searchTerm = fRequest.args.get("q")
         session = requests.Session()
         login(session)
