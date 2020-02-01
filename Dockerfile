@@ -1,6 +1,6 @@
 FROM python:3-alpine
 
-RUN apk add --update --no-cache g++ gcc libxslt-dev
+RUN apk add --update --no-cache g++ gcc libxslt-dev unrar
 
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
