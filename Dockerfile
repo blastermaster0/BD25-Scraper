@@ -2,8 +2,6 @@ FROM python:3-alpine
 
 RUN apk add --no-cache gcc musl-dev libxslt-dev
 
-RUN pip3 install lxml
-
 RUN mkdir -p /usr/src/app
 WORKDIR /usr/src/app
 
