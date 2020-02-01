@@ -145,13 +145,70 @@ def buildRSSXML(results):
     return rss
 
 
-@app.route("/")
-def main():
-    searchTerm = fRequest.args.get("q")
-    session = requests.Session()
-    login(session)
-    allResults = getAllResults(session, searchTerm)
-    xml = buildRSSXML(allResults)
+def buildCapsXML():
+    caps = ET.Element("caps")
+    caps.set("version", "2.0")
+    caps.set("xmlns:atom", "http://www.w3.org/2005/Atom")
+    caps.set("xmlns:newznab", "http://www.newznab.com/DTD/2010/feeds/attributes/")
+
+    server = ET.SubElement(caps, "server")
+    server.set("version", "1.0")
+    server.set("title", "BD25.eu Scraper")
+
+    searching = ET.SubElement(caps, "searching")
+    search = ET.SubElement(searching, "search")
+    search.set("available", "yes")
+    search.set("supportedParams", "q")
+
+    tvSearch = ET.SubElement(searching, "tv-search")
+    tvSearch.set("available", "yes")
+    tvSearch.set("supportedParams", "q")
+
+    movieSearch = ET.SubElement(searching, "movie-search")
+    movieSearch.set("available", "yes")
+    movieSearch.set("supportedParams", "q")
+
+    categories = ET.SubElement(caps, "categories")
+
+    moviesCategory = ET.SubElement(categories, "category")
+    moviesCategory.set("id", "2000")
+    moviesCategory.set("name", "Movies")
+
+    UHDSubcategory = ET.SubElement(moviesCategory, "subcat")
+    UHDSubcategory.set("id", "2045")
+    UHDSubcategory.set("name", "4k")
+
+    BRSubcategory = ET.SubElement(moviesCategory, "subcat")
+    BRSubcategory.set("id", "2050")
+    BRSubcategory.set("name", "BluRay")
+
+    tvCategory = ET.SubElement(categories, "category")
+    tvCategory.set("id", "2000")
+    tvCategory.set("name", "TV")
+
+    HDTVSubcategory = ET.SubElement(tvCategory, "subcat")
+    HDTVSubcategory.set("id", "5040")
+    HDTVSubcategory.set("name", "HD")
+
+    UHDTVSubcategory = ET.SubElement(tvCategory, "subcat")
+    UHDTVSubcategory.set("id", "5045")
+    UHDTVSubcategory.set("name", "4K")
+
+    return caps
+
+
+@app.route("/api")
+def api():
+    reqType = fRequest.args.get("t")
+    xml = ""
+    if reqType == "caps":
+        xml = buildCapsXML()
+    if reqType == "search":
+        searchTerm = fRequest.args.get("q")
+        session = requests.Session()
+        login(session)
+        allResults = getAllResults(session, searchTerm)
+        xml = buildRSSXML(allResults)
     return Response(
         ET.tostring(xml, encoding="utf8", method="xml"), mimetype="text/xml"
     )
