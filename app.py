@@ -1,14 +1,13 @@
-import xml.etree.ElementTree as ET
-import requests
-import re
-from sys import argv
-from os import getenv
-from io import BytesIO
-from flask import Flask, Response, request as fRequest, stream_with_context
-from dotenv import load_dotenv
-from datetime import datetime
 from bs4 import BeautifulSoup
-from gevent.pywsgi import WSGIServer
+from datetime import datetime
+from dotenv import load_dotenv
+from flask import Flask, Response, request as fRequest, stream_with_context
+from io import BytesIO
+from os import getenv
+from sys import argv
+import re
+import requests
+import xml.etree.ElementTree as ET
 
 # Constants
 BASE_URL = "http://www.bd25.eu"
@@ -172,5 +171,4 @@ def download():
 
 
 if __name__ == "__main__":
-    http_server = WSGIServer(("", 5000), app)
-    http_server.serve_forever()
+    app.run(debug=True)
