@@ -168,7 +168,3 @@ def download():
         content_type=res.headers["content-type"],
         headers={"Content-Disposition": res.headers["Content-Disposition"]},
     )
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
