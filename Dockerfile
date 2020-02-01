@@ -1,6 +1,6 @@
 FROM python:3-alpine
 
-RUN apk add --no-cache gcc musl-dev libxslt-dev && pip3 install pip==10.0.1
+RUN apk add --no-cache gcc musl-dev libxslt-dev
 
 RUN pip3 install lxml
 
