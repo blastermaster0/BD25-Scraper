@@ -69,6 +69,11 @@ def parseSearchResults(session, soup):
                 dateTd = result.find(string=re.compile("\d+/\d+/\d+"))
                 if not dateTd:
                     continue
+
+                sizeTd = result.find(string=re.compile("\d+.\d+ GB"))
+                if not sizeTd:
+                    continue
+                size = str(int(float(sizeTd.replace(" GB", "")) * 1024 * 1024 * 1024))
                 date = datetime.strptime(dateTd, "%d/%m/%Y")
                 pubDate = date.strftime("%a, %d %b %Y %H:%M:%S")
                 idMatch = re.search("id=(\d+)", detailsHref["href"])
@@ -83,6 +88,7 @@ def parseSearchResults(session, soup):
                         "title": resultTitle,
                         "pubDate": pubDate,
                         "password": resultPassword,
+                        "size": size,
                         "detailsURL": f"{fRequest.base_url}details?id={resultId}",
                         "downloadURL": f"{fRequest.base_url}download?id={resultId}",
                     }
@@ -149,7 +155,7 @@ def buildRSSXML(results):
 
         itemEnclosure = ET.SubElement(item, "enclosure")
         itemEnclosure.set("url", result["detailsURL"])
-        itemEnclosure.set("length", "824701702")
+        itemEnclosure.set("length", result["size"])
         itemEnclosure.set("type", "application/x-rar-compressed")
 
         itemLink = ET.SubElement(item, "link")
@@ -165,7 +171,7 @@ def buildRSSXML(results):
 
         nnSize = ET.SubElement(item, "newznab:attr")
         nnSize.set("name", "size")
-        nnSize.set("value", "824701702")
+        nnSize.set("value", result["size"])
 
         nnGrabs = ET.SubElement(item, "newznab:attr")
         nnGrabs.set("name", "grabs")
@@ -254,6 +260,8 @@ def api():
         login(session)
         allResults = getAllResults(session, searchTerm)
         xml = buildRSSXML(allResults)
+    if xml == "":
+        return Response("", 404)
     return Response(
         ET.tostring(xml, encoding="utf8", method="xml"), mimetype="text/xml"
     )
