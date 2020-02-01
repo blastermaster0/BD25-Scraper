@@ -89,8 +89,8 @@ def parseSearchResults(session, soup):
                         "pubDate": pubDate,
                         "password": resultPassword,
                         "size": size,
-                        "detailsURL": f"{fRequest.base_url}details?id={resultId}",
-                        "downloadURL": f"{fRequest.base_url}download?id={resultId}",
+                        "detailsURL": f"{fRequest.base_url}/details?id={resultId}",
+                        "downloadURL": f"{fRequest.base_url}/download?id={resultId}",
                     }
                 )
             except err:
@@ -267,7 +267,7 @@ def api():
     )
 
 
-@app.route("/download")
+@app.route("/api/download")
 def download():
     nzbId = fRequest.args.get("id")
     session = requests.Session()
@@ -280,7 +280,7 @@ def download():
     )
 
 
-@app.route("/details")
+@app.route("/api/details")
 def details():
     nzbId = fRequest.args.get("id")
     session = requests.Session()
@@ -289,5 +289,4 @@ def details():
     return Response(
         stream_with_context(res.iter_content()),
         content_type=res.headers["content-type"],
-        headers={"Content-Disposition": res.headers["Content-Disposition"]},
     )
