@@ -14,6 +14,7 @@ BASE_URL = "http://www.bd25.eu"
 
 DOWNLOAD_URL = f"{BASE_URL}/download.php"
 FILES_URL = f"{BASE_URL}/index.php?page=files"
+DETAILS_URL = f"{BASE_URL}/index.php?page=NZB-details"
 LOGIN_URL = f"{BASE_URL}/index.php?page=login"
 PASSWORD_URL = f"{BASE_URL}/getpass.php"
 
@@ -82,6 +83,7 @@ def parseSearchResults(session, soup):
                         "title": resultTitle,
                         "pubDate": pubDate,
                         "password": resultPassword,
+                        "detailsURL": f"{fRequest.base_url}details?id={resultId}",
                         "downloadURL": f"{fRequest.base_url}download?id={resultId}",
                     }
                 )
@@ -106,8 +108,8 @@ def getAllResults(session, searchTerm):
 
 def categoryToNewzNab(category):
     if re.search("UHD", category):
-        return "4k"
-    return "BluRay"
+        return "Movies > 4k"
+    return "Movies > BluRay"
 
 
 def categoryToNewzNabId(category):
@@ -126,22 +128,65 @@ def buildRSSXML(results):
     title.text = "BD25.eu"
     for result in results:
         item = ET.SubElement(channel, "item")
+
         itemTitle = ET.SubElement(item, "title")
         itemTitle.text = result["title"].replace(" ", ".")
-        itemPubDate = ET.SubElement(item, "pubDate")
-        itemPubDate.text = result["pubDate"]
-        itemCategory = ET.SubElement(item, "category")
-        itemCategory.text = categoryToNewzNab(result["category"])
-        itemLink = ET.SubElement(item, "link")
-        itemLink.text = result["downloadURL"]
+
         itemGuid = ET.SubElement(item, "guid")
         itemGuid.text = result["downloadURL"]
+
+        itemComments = ET.SubElement(item, "comments")
+        itemComments.text = result["detailsURL"]
+
+        itemPubDate = ET.SubElement(item, "pubDate")
+        itemPubDate.text = result["pubDate"]
+
+        itemCategory = ET.SubElement(item, "category")
+        itemCategory.text = categoryToNewzNab(result["category"])
+
+        itemDescription = ET.SubElement(item, "description")
+        itemDescription.text = result["title"].replace(" ", ".")
+
+        itemEnclosure = ET.SubElement(item, "enclosure")
+        itemEnclosure.set("url", result["detailsURL"])
+        itemEnclosure.set("length", "824701702")
+        itemEnclosure.set("type", "application/x-rar-compressed")
+
+        itemLink = ET.SubElement(item, "link")
+        itemLink.text = result["downloadURL"]
+
+        nnMainCategory = ET.SubElement(item, "newznab:attr")
+        nnMainCategory.set("name", "category")
+        nnMainCategory.set("value", "2000")
+
         nnCategory = ET.SubElement(item, "newznab:attr")
         nnCategory.set("name", "category")
         nnCategory.set("value", categoryToNewzNabId(result["category"]))
+
+        nnSize = ET.SubElement(item, "newznab:attr")
+        nnSize.set("name", "size")
+        nnSize.set("value", "824701702")
+
+        nnGrabs = ET.SubElement(item, "newznab:attr")
+        nnGrabs.set("name", "grabs")
+        nnGrabs.set("value", "100")
+
+        nnGuid = ET.SubElement(item, "newznab:attr")
+        nnGuid.set("name", "guid")
+        nnGuid.set("value", result["id"])
+
+        nnInfo = ET.SubElement(item, "newznab:attr")
+        nnInfo.set("name", "info")
+        nnInfo.set("value", result["detailsURL"])
+
+        nnComments = ET.SubElement(item, "newznab:attr")
+        nnComments.set("name", "comments")
+        nnComments.set("value", "0")
+
         nnPwd = ET.SubElement(item, "newznab:attr")
         nnPwd.set("name", "password")
         nnPwd.set("value", result["password"])
+
     return rss
 
 
@@ -220,6 +265,19 @@ def download():
     session = requests.Session()
     login(session)
     res = session.get(f"{DOWNLOAD_URL}?id={nzbId}", stream=True)
+    return Response(
+        stream_with_context(res.iter_content()),
+        content_type=res.headers["content-type"],
+        headers={"Content-Disposition": res.headers["Content-Disposition"]},
+    )
+
+
+@app.route("/details")
+def details():
+    nzbId = fRequest.args.get("id")
+    session = requests.Session()
+    login(session)
+    res = session.get(f"{DETAILS_URL}&id={nzbId}", stream=True)
     return Response(
         stream_with_context(res.iter_content()),
         content_type=res.headers["content-type"],
