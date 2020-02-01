@@ -12,9 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . /usr/src/app
 
-# Expose the Flask port
-EXPOSE 5000
+EXPOSE 7897
 
 ENTRYPOINT [ "python" ]
 
-CMD [ "app.py" ]
+CMD [ "server.py" ]
