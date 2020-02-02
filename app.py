@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from datetime import datetime
 from dotenv import load_dotenv
-from flask import Flask, Response, request as fRequest, send_file
+from flask import abort, Flask, Response, request as fRequest, send_file
 from io import BytesIO
 from os import getenv
 from sys import argv
@@ -33,6 +33,12 @@ def login(session):
     session.post(LOGIN_URL, data=data)
 
 
+def getSession():
+    session = requests.Session()
+    login(session)
+    return session
+
+
 def getSearchResultsByPage(session, searchTerm, page):
     res = session.get(f"{FILES_URL}&search={searchTerm}&pages={page}")
     return BeautifulSoup(res.text, features="lxml")
@@ -50,7 +56,10 @@ def getPagePassword(session, pageId):
     data = {"infohash": pageId, "rndval": datetime.utcnow(), "thanks": 1}
     res = session.post(PASSWORD_URL, data=data)
     pwSearch = re.search("(?:[^ ]+|1)$", res.text)
-    return pwSearch[0].replace("|1", "")
+    password = pwSearch[0].replace("|1", "")
+    if password == "nopw":
+        return
+    return password
 
 
 def parseSearchResults(session, soup):
@@ -89,7 +98,7 @@ def parseSearchResults(session, soup):
                         "pubDate": pubDate,
                         "size": size,
                         "detailsURL": f"{fRequest.base_url}/details?id={resultId}",
-                        "downloadURL": f"{fRequest.base_url}/download?id={resultId}",
+                        "downloadURL": f"{fRequest.base_url}?t=getNzb&id={resultId}",
                     }
                 )
             except err:
@@ -188,6 +197,10 @@ def buildRSSXML(results):
         nnComments.set("name", "comments")
         nnComments.set("value", "0")
 
+        nnComments = ET.SubElement(item, "newznab:attr")
+        nnComments.set("name", "password")
+        nnComments.set("value", "1")
+
     return rss
 
 
@@ -243,33 +256,39 @@ def buildCapsXML():
     return caps
 
 
-@app.route("/api")
-def api():
-    reqType = fRequest.args.get("t")
-    xml = ""
-    if reqType == "caps":
-        xml = buildCapsXML()
-    if reqType == "search" or reqType == "movie":
-        searchTerm = fRequest.args.get("q")
-        session = requests.Session()
-        login(session)
-        allResults = getAllResults(session, searchTerm)
-        xml = buildRSSXML(allResults)
-    if xml == "":
-        return Response("", 404)
+def getXMLResponse(xml):
     return Response(
         ET.tostring(xml, encoding="utf8", method="xml"), mimetype="text/xml"
     )
 
 
+#####################################################################################
+# ROUTES
+#####################################################################################
+
+
+@app.route("/api")
+def api():
+    reqType = fRequest.args.get("t")
+    if reqType == "caps":
+        return getXMLResponse(buildCapsXML())
+    if reqType == "search" or reqType == "movie":
+        searchTerm = fRequest.args.get("q")
+        session = requests.Session()
+        login(session)
+        allResults = getAllResults(session, searchTerm)
+        return getXMLResponse(buildRSSXML(allResults))
+    if reqType == "getNzb":
+        nzbId = fRequest.args.get("id")
+        return Response(f"{fRequest.base_url}/download?id={nzbId}", 200)
+    return abort(404)
+
+
 @app.route("/api/download")
 def download():
     nzbId = fRequest.args.get("id")
-    session = requests.Session()
-    login(session)
-    password = getPagePassword(session, nzbId)
-    filename = f"{nzbId}-{datetime.utcnow()}"
-    rarFile = f"/tmp/{filename}.rar"
+    session = getSession()
+    rarFile = f"/tmp/{nzbId}-{datetime.utcnow()}.rar"
     res = session.get(f"{DOWNLOAD_URL}?id={nzbId}")
     with open(rarFile, "wb") as f:
         for chunk in res.iter_content(chunk_size=1024):
@@ -278,20 +297,22 @@ def download():
     rar = rarfile.RarFile(rarFile)
     file = next(x for x in rar.infolist() if x.filename.endswith("nzb"))
     rar.extract(file, path="/tmp")
+    finalFilename = file.filename
+    if not re.search("{{.+}}", finalFilename):
+        password = getPagePassword(session, nzbId)
+        if password:
+            finalFilename = (
+                f"{finalFilename.replace('.nzb', '')}{'{{'}{password}{'}}'}.nzb"
+            )
     return send_file(
-        f"/tmp/{file.filename}",
-        attachment_filename=f"{password}.nzb",
-        as_attachment=True,
+        f"/tmp/{file.filename}", attachment_filename=finalFilename, as_attachment=True,
     )
 
 
 @app.route("/api/details")
 def details():
     nzbId = fRequest.args.get("id")
-    session = requests.Session()
-    login(session)
-    res = session.get(f"{DETAILS_URL}&id={nzbId}", stream=True)
-    return Response(
-        stream_with_context(res.iter_content()),
-        content_type=res.headers["content-type"],
-    )
+    session = getSession()
+    res = session.get(f"{DETAILS_URL}&id={nzbId}")
+    return Response(res.content, res.status_code)
+
