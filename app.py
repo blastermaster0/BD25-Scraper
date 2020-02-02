@@ -87,7 +87,7 @@ def parseSearchResults(session, soup):
                     {
                         "id": resultId,
                         "category": resultCategory,
-                        "title": resultTitle,
+                        "title": f"{resultCategory}-{resultTitle}",
                         "pubDate": pubDate,
                         "password": resultPassword,
                         "size": size,
