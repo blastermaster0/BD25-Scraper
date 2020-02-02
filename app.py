@@ -81,7 +81,8 @@ def parseSearchResults(session, soup):
                 resultId = idMatch[1]
                 resultCategory = categoryHref.contents[0]
                 resultTitle = detailsHref.contents[0]
-                resultPassword = getPagePassword(session, resultId)
+                # resultPassword = getPagePassword(session, resultId)
+                resultPassword = ""
                 finalResults.append(
                     {
                         "id": resultId,
