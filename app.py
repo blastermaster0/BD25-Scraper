@@ -81,15 +81,12 @@ def parseSearchResults(session, soup):
                 resultId = idMatch[1]
                 resultCategory = categoryHref.contents[0]
                 resultTitle = detailsHref.contents[0]
-                # resultPassword = getPagePassword(session, resultId)
-                resultPassword = ""
                 finalResults.append(
                     {
                         "id": resultId,
                         "category": resultCategory,
                         "title": f"{resultTitle}.{resultCategory}",
                         "pubDate": pubDate,
-                        "password": resultPassword,
                         "size": size,
                         "detailsURL": f"{fRequest.base_url}/details?id={resultId}",
                         "downloadURL": f"{fRequest.base_url}/download?id={resultId}",
@@ -191,10 +188,6 @@ def buildRSSXML(results):
         nnComments.set("name", "comments")
         nnComments.set("value", "0")
 
-        nnPwd = ET.SubElement(item, "newznab:attr")
-        nnPwd.set("name", "password")
-        nnPwd.set("value", result["password"])
-
     return rss
 
 
@@ -274,6 +267,7 @@ def download():
     nzbId = fRequest.args.get("id")
     session = requests.Session()
     login(session)
+    password = getPagePassword(session, nzbId)
     filename = f"{nzbId}-{datetime.utcnow()}"
     rarFile = f"/tmp/{filename}.rar"
     res = session.get(f"{DOWNLOAD_URL}?id={nzbId}")
@@ -285,7 +279,9 @@ def download():
     file = next(x for x in rar.infolist() if x.filename.endswith("nzb"))
     rar.extract(file, path="/tmp")
     return send_file(
-        f"/tmp/{file.filename}", attachment_filename=file.filename, as_attachment=True
+        f"/tmp/{file.filename}",
+        attachment_filename=f"{password}.nzb",
+        as_attachment=True,
     )
 
 
