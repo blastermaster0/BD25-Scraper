@@ -26,6 +26,7 @@ app = Flask(__name__)
 load_dotenv()
 uid = getenv("USERNAME")
 pwd = getenv("PASSWORD")
+PASSWORD_FILE = getenv("PASSWORD_FILE")
 
 
 def login(session):
@@ -98,7 +99,7 @@ def parseSearchResults(session, soup):
                         "pubDate": pubDate,
                         "size": size,
                         "detailsURL": f"{fRequest.base_url}/details?id={resultId}",
-                        "downloadURL": f"{fRequest.base_url}?t=getNzb&id={resultId}",
+                        "downloadURL": f"{fRequest.base_url}/download?id={resultId}",
                     }
                 )
             except err:
@@ -278,9 +279,6 @@ def api():
         login(session)
         allResults = getAllResults(session, searchTerm)
         return getXMLResponse(buildRSSXML(allResults))
-    if reqType == "getNzb":
-        nzbId = fRequest.args.get("id")
-        return Response(f"{fRequest.base_url}/download?id={nzbId}", 200)
     return abort(404)
 
 
@@ -288,6 +286,7 @@ def api():
 def download():
     nzbId = fRequest.args.get("id")
     session = getSession()
+
     rarFile = f"/tmp/{nzbId}-{datetime.utcnow()}.rar"
     res = session.get(f"{DOWNLOAD_URL}?id={nzbId}")
     with open(rarFile, "wb") as f:
@@ -297,15 +296,14 @@ def download():
     rar = rarfile.RarFile(rarFile)
     file = next(x for x in rar.infolist() if x.filename.endswith("nzb"))
     rar.extract(file, path="/tmp")
-    finalFilename = file.filename
-    if not re.search("{{.+}}", finalFilename):
-        password = getPagePassword(session, nzbId)
-        if password:
-            finalFilename = (
-                f"{finalFilename.replace('.nzb', '')}{'{{'}{password}{'}}'}.nzb"
-            )
+
+    password = getPagePassword(session, nzbId)
+    if password and PASSWORD_FILE:
+        with open(PASSWORD_FILE, "a") as pwdfile:
+            pwdfile.write(f"{password}\n")
+
     return send_file(
-        f"/tmp/{file.filename}", attachment_filename=finalFilename, as_attachment=True,
+        f"/tmp/{file.filename}", attachment_filename=file.filename, as_attachment=True,
     )
 
 
