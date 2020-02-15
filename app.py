@@ -95,7 +95,7 @@ def parseSearchResults(session, soup):
                     {
                         "id": resultId,
                         "category": resultCategory,
-                        "title": f"{resultTitle}.{resultCategory}",
+                        "title": f"{resultTitle}.BD50-{resultCategory}",
                         "pubDate": pubDate,
                         "size": size,
                         "detailsURL": f"{fRequest.base_url}/details?id={resultId}",
@@ -120,19 +120,6 @@ def getAllResults(session, searchTerm):
         notLastPage = checkHasNextPage(soup)
     return allResults
 
-
-def categoryToNewzNab(category):
-    if re.search("UHD", category):
-        return "Movies > 4k"
-    return "Movies > BluRay"
-
-
-def categoryToNewzNabId(category):
-    if re.search("UHD", category):
-        return "2045"
-    return "2050"
-
-
 def buildRSSXML(results):
     rss = ET.Element("rss")
     rss.set("version", "2.0")
@@ -156,9 +143,6 @@ def buildRSSXML(results):
         itemPubDate = ET.SubElement(item, "pubDate")
         itemPubDate.text = result["pubDate"]
 
-        itemCategory = ET.SubElement(item, "category")
-        itemCategory.text = categoryToNewzNab(result["category"])
-
         itemDescription = ET.SubElement(item, "description")
         itemDescription.text = result["title"].replace(" ", ".")
 
@@ -173,10 +157,6 @@ def buildRSSXML(results):
         nnMainCategory = ET.SubElement(item, "newznab:attr")
         nnMainCategory.set("name", "category")
         nnMainCategory.set("value", "2000")
-
-        nnCategory = ET.SubElement(item, "newznab:attr")
-        nnCategory.set("name", "category")
-        nnCategory.set("value", categoryToNewzNabId(result["category"]))
 
         nnSize = ET.SubElement(item, "newznab:attr")
         nnSize.set("name", "size")
