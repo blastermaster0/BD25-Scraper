@@ -99,7 +99,7 @@ def parseSearchResults(session, soup):
                         "title": f"{resultTitle}.BD50-{resultCategory}",
                         "pubDate": pubDate,
                         "size": size,
-                        "detailsURL": f"{fRequest.base_url}/details?id={resultId}",
+                        "detailsURL": f"{fRequest.base_url}/download?id={resultId}",
                         "downloadURL": f"{fRequest.base_url}/download?id={resultId}",
                     }
                 )
@@ -287,11 +287,3 @@ def download():
     return send_file(
         f"/tmp/{file.filename}", attachment_filename=file.filename, as_attachment=True,
     )
-
-
-@app.route("/api/details")
-def details():
-    nzbId = fRequest.args.get("id")
-    session = getSession()
-    res = session.get(f"{DETAILS_URL}&id={nzbId}")
-    return Response(res.content, res.status_code)
