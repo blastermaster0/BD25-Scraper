@@ -9,7 +9,6 @@ import re
 import requests
 import xml.etree.ElementTree as ET
 from unrar import rarfile
-import logging
 
 # Constants
 BASE_URL = "http://www.bd25.eu"
@@ -22,7 +21,6 @@ PASSWORD_URL = f"{BASE_URL}/getpass.php"
 
 # Flask App
 app = Flask(__name__)
-app.logger.setLevel(logging.DEBUG)
 
 # Secrets
 load_dotenv()
