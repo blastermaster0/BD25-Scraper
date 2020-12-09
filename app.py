@@ -9,6 +9,7 @@ import re
 import requests
 import xml.etree.ElementTree as ET
 from unrar import rarfile
+import logging
 
 # Constants
 BASE_URL = "http://www.bd25.eu"
@@ -21,6 +22,7 @@ PASSWORD_URL = f"{BASE_URL}/getpass.php"
 
 # Flask App
 app = Flask(__name__)
+app.logger.setLevel(logging.DEBUG)
 
 # Secrets
 load_dotenv()
@@ -84,7 +86,8 @@ def parseSearchResults(session, soup):
                 sizeTd = result.find(string=re.compile("\d+.\d+ GB"))
                 if not sizeTd:
                     continue
-                size = str(int(float(sizeTd.replace(" GB", "")) * 1024 * 1024 * 1024))
+                size = str(
+                    int(float(sizeTd.replace(" GB", "")) * 1024 * 1024 * 1024))
                 date = datetime.strptime(dateTd, "%d/%m/%Y")
                 pubDate = date.strftime("%a, %d %b %Y %H:%M:%S")
                 idMatch = re.search("id=(\d+)", detailsHref["href"])
@@ -119,6 +122,7 @@ def getAllResults(session, searchTerm):
         allResults.extend(parseSearchResults(session, soup))
         notLastPage = checkHasNextPage(soup)
     return allResults
+
 
 def buildRSSXML(results):
     rss = ET.Element("rss")
@@ -293,4 +297,3 @@ def details():
     session = getSession()
     res = session.get(f"{DETAILS_URL}&id={nzbId}")
     return Response(res.content, res.status_code)
-
